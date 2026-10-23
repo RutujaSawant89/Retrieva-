@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -68,10 +69,30 @@ def create_app() -> FastAPI:
     return app
 
 
+def _warm_up_models() -> None:
+    """Load models so the first user request does not pay the load time."""
+    from app.services.embeddings.service import get_embedding_service
+    from app.services.reranking.rerankers import get_reranker
+
+    try:
+        service = get_embedding_service()
+        service.provider.embed_query("warm up")
+        service.provider.count_tokens("warm up")
+        reranker = get_reranker()
+        if reranker is not None:
+            reranker.score("warm up", ["warm up"])
+        logger.info("models_warmed_up", extra={"embedding_model": service.model_version})
+    except Exception:
+        logger.warning("model_warmup_failed", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    if get_settings().environment != "test":
+    settings = get_settings()
+    if settings.environment != "test":
         await anyio.to_thread.run_sync(_warn_if_rls_bypassed)
+        if settings.warmup_models:
+            threading.Thread(target=_warm_up_models, name="model-warmup", daemon=True).start()
     yield
 
 
