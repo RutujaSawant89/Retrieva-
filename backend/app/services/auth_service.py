@@ -36,8 +36,6 @@ from app.db.models import (
 from app.schemas.auth import OrganizationSummary, SessionOut, UserOut
 from app.services import audit
 
-REFRESH_RACE_GRACE = timedelta(seconds=20)
-
 
 @dataclass
 class IssuedSession:
@@ -225,42 +223,48 @@ def refresh(
     )
     if token is None:
         raise AuthenticationError("Invalid refresh token")
-    if (
-        token.revoked_at is not None
-        and token.replaced_by_id is not None
-        and _now() - token.revoked_at < REFRESH_RACE_GRACE
-    ):
-        # Two tabs refreshed concurrently with the same cookie. The other request already
-        # rotated it and set the new cookie, so the client simply retries; no theft signal.
-        raise AuthenticationError("Refresh token was just rotated; retry", code="refresh_race")
     if token.revoked_at is not None:
-        # Reuse of a rotated token signals theft: invalidate every token in the family.
-        db.execute(
+        successor = db.get(RefreshToken, token.replaced_by_id) if token.replaced_by_id else None
+        if successor is not None and successor.revoked_at is None and successor.expires_at > _now():
+            # The rotated token's successor was never used: the client did not receive it
+            # (lost response, navigation mid-request) or another tab refreshed concurrently.
+            # Supersede the unused successor instead of treating this as theft.
+            successor.revoked_at = _now()
+            issued = _rotate(db, token, client, org_id)
+            # Whichever of the two cookies the browser ends up keeping must stay recoverable.
+            successor.replaced_by_id = token.replaced_by_id
+            return issued
+        # The successor chain moved on, so an old token is being replayed: likely theft.
+        # Invalidate every token in the family.
+        revoked = db.execute(
             update(RefreshToken)
             .where(RefreshToken.family_id == token.family_id, RefreshToken.revoked_at.is_(None))
             .values(revoked_at=_now())
-        )
-        tenancy.bind_tenant(db, token.organization_id)
-        audit.record(
-            db,
-            org_id=token.organization_id,
-            user_id=token.user_id,
-            action="auth.refresh_reuse_detected",
-            ip_address=client.ip,
-            user_agent=client.user_agent,
-            details={"family_id": str(token.family_id)},
-        )
-        db.commit()
+        ).rowcount
+        if revoked:
+            tenancy.bind_tenant(db, token.organization_id)
+            audit.record(
+                db,
+                org_id=token.organization_id,
+                user_id=token.user_id,
+                action="auth.refresh_reuse_detected",
+                ip_address=client.ip,
+                user_agent=client.user_agent,
+                details={"family_id": str(token.family_id)},
+            )
+            db.commit()
         raise AuthenticationError("Refresh token has already been used; please sign in again")
     if token.expires_at <= _now():
         raise AuthenticationError("Refresh token expired")
+    return _rotate(db, token, client, org_id)
 
+
+def _rotate(db: Session, token: RefreshToken, client: ClientInfo, org_id: uuid.UUID | None) -> IssuedSession:
     user = db.get(User, token.user_id)
     if user is None or not user.is_active or user.deleted_at is not None:
         raise AuthenticationError("Account is not active")
-
     issued = _issue(db, user, org_id or token.organization_id, client, family_id=token.family_id)
-    token.revoked_at = _now()
+    token.revoked_at = token.revoked_at or _now()
     token.replaced_by_id = db.scalar(
         select(RefreshToken.id).where(RefreshToken.token_hash == hash_token(issued.refresh_token))
     )

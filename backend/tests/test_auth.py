@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import psycopg
 from conftest import STRONG_PASSWORD, auth_headers, register
 
 
@@ -76,45 +75,52 @@ def test_protected_route_requires_token(client):
 
 def _use_cookie(client, value):  # type: ignore[no-untyped-def]
     client.cookies.clear()
-    client.cookies.set("retrieva_refresh", value, path="/api/v1/auth")
+    client.cookies.set("retrieva_refresh", value, domain="testserver.local", path="/api/v1/auth")
 
 
-def test_refresh_rotates_and_detects_reuse(client, admin_db_url):
+def test_refresh_rotates_and_detects_reuse(client):
     register(client, "rotate@acme.example.com")
-    first_cookie = client.cookies.get("retrieva_refresh")
+    first = client.cookies.get("retrieva_refresh")
+    assert client.post("/api/v1/auth/refresh").status_code == 200
+    second = client.cookies.get("retrieva_refresh")
+    assert second and second != first
+    # The legitimate client keeps rotating, so the successor of `first` has been used.
+    assert client.post("/api/v1/auth/refresh").status_code == 200
+    third = client.cookies.get("retrieva_refresh")
 
-    rotated = client.post("/api/v1/auth/refresh")
-    assert rotated.status_code == 200
-    second_cookie = client.cookies.get("retrieva_refresh")
-    assert second_cookie and second_cookie != first_cookie
-
-    # Age the rotation past the concurrent-refresh grace window.
-    with psycopg.connect(admin_db_url, autocommit=True) as conn:
-        conn.execute(
-            "UPDATE refresh_tokens SET revoked_at = now() - interval '1 hour' WHERE revoked_at IS NOT NULL"
-        )
-
-    # Replaying the old token revokes the whole family, including the newest token.
-    _use_cookie(client, first_cookie)
-    replay = client.post("/api/v1/auth/refresh")
-    assert replay.status_code == 401
-    _use_cookie(client, second_cookie)
+    # Replaying `first` is theft: the whole family is revoked, including the newest token.
+    _use_cookie(client, first)
+    assert client.post("/api/v1/auth/refresh").status_code == 401
+    _use_cookie(client, third)
     assert client.post("/api/v1/auth/refresh").status_code == 401
 
 
-def test_concurrent_refresh_race_is_not_treated_as_theft(client):
+def test_lost_refresh_response_does_not_log_out(client):
+    """A rotation whose response never reached the client, or a concurrent tab, is recoverable."""
     register(client, "race@acme.example.com")
-    first_cookie = client.cookies.get("retrieva_refresh")
+    t1 = client.cookies.get("retrieva_refresh")
     assert client.post("/api/v1/auth/refresh").status_code == 200
-    second_cookie = client.cookies.get("retrieva_refresh")
+    t2 = client.cookies.get("retrieva_refresh")
 
-    # A second tab presents the just-rotated token: rejected softly, family stays valid.
-    _use_cookie(client, first_cookie)
-    raced = client.post("/api/v1/auth/refresh")
-    assert raced.status_code == 401
-    assert raced.json()["error"]["code"] == "refresh_race"
-    _use_cookie(client, second_cookie)
+    # The browser never stored t2 and presents t1 again: re-issued, not treated as theft.
+    _use_cookie(client, t1)
     assert client.post("/api/v1/auth/refresh").status_code == 200
+    t3 = client.cookies.get("retrieva_refresh")
+
+    # Concurrent tabs: the browser kept the superseded t2 instead of t3. Still recoverable.
+    _use_cookie(client, t2)
+    assert client.post("/api/v1/auth/refresh").status_code == 200
+    t4 = client.cookies.get("retrieva_refresh")
+    assert len({t1, t2, t3, t4}) == 4
+
+    # Normal use continues on the newest token...
+    assert client.post("/api/v1/auth/refresh").status_code == 200
+    t5 = client.cookies.get("retrieva_refresh")
+    # ...and replaying a token whose chain has moved on is still detected as theft.
+    _use_cookie(client, t1)
+    assert client.post("/api/v1/auth/refresh").status_code == 401
+    _use_cookie(client, t5)
+    assert client.post("/api/v1/auth/refresh").status_code == 401
 
 
 def test_logout_revokes_refresh_token(client):
