@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest, multiprocess
 from sqlalchemy import text
 
 from app.core.config import get_settings
@@ -41,4 +42,9 @@ def ready() -> JSONResponse:
 
 @router.get("/metrics", include_in_schema=False)
 def metrics() -> Response:
+    if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+        # Aggregate samples written by every API worker process.
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+        return Response(generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

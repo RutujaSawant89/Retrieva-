@@ -10,6 +10,10 @@ import { EmptyState } from '@/components/ui/primitives'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 import { AdminPage } from '@/pages/admin/AdminPage'
+import { AnalyticsPage } from '@/pages/AnalyticsPage'
+import { ComparePage } from '@/pages/ComparePage'
+import { EvaluationPage } from '@/pages/EvaluationPage'
+import { ResearchPage } from '@/pages/ResearchPage'
 import { ChatPage } from '@/pages/chat/ChatPage'
 import { CollectionsPage } from '@/pages/collections/CollectionsPage'
 import { DocumentDetailPage } from '@/pages/documents/DocumentDetailPage'
@@ -72,6 +76,19 @@ export function AppRoutes() {
           <Route path="documents/:documentId" element={<DocumentDetailPage />} />
           <Route path="collections" element={<CollectionsPage />} />
           <Route path="collections/:collectionId" element={<CollectionsPage />} />
+          <Route path="research" element={<RequirePermission permission="research:use">
+                <ResearchPage />
+              </RequirePermission>} />
+          <Route path="research/:reportId" element={<RequirePermission permission="research:use">
+                <ResearchPage />
+              </RequirePermission>} />
+          <Route path="compare" element={<ComparePage />} />
+          <Route path="analytics" element={<RequirePermission permission="analytics:read">
+                <AnalyticsPage />
+              </RequirePermission>} />
+          <Route path="evaluation" element={<RequirePermission permission="evaluation:read">
+                <EvaluationPage />
+              </RequirePermission>} />
           <Route path="settings" element={<SettingsPage />} />
           <Route
             path="admin"

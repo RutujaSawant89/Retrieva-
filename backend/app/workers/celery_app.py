@@ -6,9 +6,11 @@ celery -A app.workers.celery_app worker --loglevel=INFO --concurrency=2
 from __future__ import annotations
 
 import contextlib
+import os
 
 from celery import Celery
-from celery.signals import worker_process_init
+from celery.signals import worker_init, worker_process_init
+from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -37,14 +39,24 @@ celery_app.conf.update(
 
 
 @worker_process_init.connect
-def _init_worker(**_: object) -> None:
+def _init_worker_process(**_: object) -> None:
     configure_logging(settings.log_level, settings.log_json)
-    if settings.metrics_enabled:
-        # Each worker process exposes metrics on its own port for Prometheus.
-        import os
 
-        from prometheus_client import start_http_server
 
-        base = int(os.environ.get("WORKER_METRICS_PORT", "9101"))
-        with contextlib.suppress(OSError):  # port taken by a sibling process
-            start_http_server(base + (os.getpid() % 50))
+@worker_init.connect
+def _init_worker(**_: object) -> None:
+    """Serve Prometheus metrics from the main worker process.
+
+    With ``PROMETHEUS_MULTIPROC_DIR`` set, every pool process writes its samples to that
+    directory and this endpoint aggregates them, so one fixed port covers the whole worker.
+    """
+    configure_logging(settings.log_level, settings.log_json)
+    if not settings.metrics_enabled:
+        return
+    port = int(os.environ.get("WORKER_METRICS_PORT", "9101"))
+    registry = None
+    if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+    with contextlib.suppress(OSError):  # port already in use: metrics are optional
+        start_http_server(port, registry=registry) if registry else start_http_server(port)

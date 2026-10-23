@@ -1,0 +1,31 @@
+groups:
+  - name: retrieva
+    rules:
+      - alert: RetrievaApiDown
+        expr: up{job="retrieva-api"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: Retrieva API is not responding to scrapes
+
+      - alert: RetrievaHighErrorRate
+        expr: |
+          sum(rate(retrieva_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(retrieva_http_requests_total[5m])), 1e-9) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: More than 5% of API requests are failing
+
+      - alert: RetrievaSlowRetrieval
+        expr: histogram_quantile(0.95, sum by (le) (rate(retrieva_retrieval_seconds_bucket{stage="dense"}[10m]))) > 1
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: p95 dense retrieval latency above 1 second
+
+      - alert: RetrievaIngestionFailures
+        expr: increase(retrieva_ingestion_jobs_total{status="failed"}[1h]) > 5
+        labels: { severity: warning }
+        annotations:
+          summary: More than 5 ingestion jobs failed in the last hour

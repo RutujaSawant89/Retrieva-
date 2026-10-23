@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowUp, History, SlidersHorizontal, Square } from 'lucide-react'
+import { ArrowUp, Download, History, SlidersHorizontal, Square } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
+import { toast } from 'sonner'
 
 import { AssistantMessage, UserMessage } from '@/components/chat/AssistantMessage'
 import { ConversationList } from '@/components/chat/ConversationList'
@@ -10,11 +11,19 @@ import { answerFromMessage, type AnswerView } from '@/components/chat/model'
 import { RetrievalOptionsPanel } from '@/components/chat/RetrievalOptionsPanel'
 import { ScopePicker } from '@/components/chat/ScopePicker'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent } from '@/components/ui/overlays'
+import {
+  Dialog,
+  DialogContent,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/overlays'
 import { Badge, ErrorState, Skeleton, Textarea } from '@/components/ui/primitives'
 import { useAuth } from '@/contexts/AuthContext'
 import { useChatStream } from '@/hooks/useChatStream'
 import { chatApi, DEFAULT_OPTIONS } from '@/services/chat'
+import { exportConversation } from '@/services/insights'
 import type { RetrievalOptions, RetrievalScopeInput } from '@/types/api'
 import { scopeSummary } from '@/utils/scope'
 
@@ -181,6 +190,27 @@ export function ChatPage() {
           <Button variant="secondary" size="sm" onClick={() => setOptionsOpen(true)}>
             <SlidersHorizontal /> <span className="hidden sm:inline">Retrieval</span>
           </Button>
+          {routeId && conversation.data && conversation.data.messages.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" aria-label="Export conversation">
+                  <Download />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {(['pdf', 'docx', 'md'] as const).map((format) => (
+                  <DropdownMenuItem
+                    key={format}
+                    onSelect={() =>
+                      exportConversation(routeId, format, conversation.data!.title).catch((e: Error) => toast.error(e.message))
+                    }
+                  >
+                    Export as {format === 'md' ? 'Markdown' : format.toUpperCase()}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">

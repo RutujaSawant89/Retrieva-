@@ -15,7 +15,8 @@ from app.services.retrieval.analyzer import content_words
 from app.services.text import split_sentences
 
 MAX_SENTENCES = 4
-MIN_SENTENCE_SCORE = 0.25
+MIN_SENTENCE_SCORE = 0.2
+RELATIVE_CUTOFF = 0.6
 
 
 def extractive_answer(
@@ -34,24 +35,29 @@ def extractive_answer(
     if not candidates:
         return None
 
-    scores = np.array([c[0] for c in candidates], dtype=float)
+    lexical = np.array([c[0] for c in candidates], dtype=float)
+    scores = lexical
     if embedder is not None:
         vectors = embedder.embed_documents([c[3] for c in candidates])
         semantic = np.clip(vectors @ embedder.embed_query(question), 0.0, 1.0)
-        scores = 0.5 * scores + 0.5 * semantic
-    # Prefer sentences from higher-ranked evidence when scores are close.
-    scores = scores - 0.02 * np.array([c[1] for c in candidates])
-
-    order = np.argsort(-scores)
+        scores = 0.5 * lexical + 0.5 * semantic
+    best = float(scores.max())
+    if best < MIN_SENTENCE_SCORE:
+        return None
+    # Keep sentences close to the best one; evidence rank only breaks ties.
+    cutoff = max(MIN_SENTENCE_SCORE, RELATIVE_CUTOFF * best)
+    order = sorted(range(len(candidates)), key=lambda i: (-round(float(scores[i]), 3), candidates[i][1]))
     chosen: list[int] = []
     seen_words: list[set[str]] = []
     for idx in order:
-        if scores[idx] < MIN_SENTENCE_SCORE or len(chosen) >= MAX_SENTENCES:
+        if scores[idx] < cutoff or len(chosen) >= MAX_SENTENCES:
             break
+        if lexical[idx] == 0 and embedder is None:
+            continue
         words = content_words(candidates[idx][3])
         if any(len(words & s) / max(1, len(words)) > 0.8 for s in seen_words):
             continue  # skip near-repeats
-        chosen.append(int(idx))
+        chosen.append(idx)
         seen_words.append(words)
     if not chosen:
         return None

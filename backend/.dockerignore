@@ -1,0 +1,10 @@
+.venv
+.pgdata
+storage
+.env
+.env.*
+**/__pycache__
+.pytest_cache
+.ruff_cache
+tests
+scripts/dev_db.py

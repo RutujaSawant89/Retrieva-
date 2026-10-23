@@ -1,0 +1,98 @@
+{
+  "description": "Hand-labelled questions over the fictional Northwind sample corpus in evaluation/datasets/sample_corpus. Each relevant passage is a verbatim snippet from the documents.",
+  "items": [
+    {
+      "question": "How much notice does the customer need to give to terminate the agreement for convenience?",
+      "relevant_passages": ["terminate this Agreement for convenience upon ninety (90) days prior written notice"],
+      "reference_answer": "The Customer may terminate for convenience upon ninety (90) days prior written notice."
+    },
+    {
+      "question": "What happens if a party materially breaches the contract?",
+      "relevant_passages": ["terminate this Agreement for material breach if the breach is not cured within thirty (30) days"],
+      "reference_answer": "Either party may terminate for material breach if the breach is not cured within thirty (30) days after written notice."
+    },
+    {
+      "question": "What is the annual subscription fee?",
+      "relevant_passages": ["annual subscription fee of 120,000 USD"],
+      "reference_answer": "The annual subscription fee is 120,000 USD, invoiced annually in advance."
+    },
+    {
+      "question": "How quickly must invoices be paid and what is the late payment interest?",
+      "relevant_passages": ["Invoices are payable within thirty (30) days of the invoice date"],
+      "reference_answer": "Invoices are payable within thirty (30) days; late payments accrue interest at 1.5 percent per month."
+    },
+    {
+      "question": "What uptime does the provider commit to and what credits apply?",
+      "relevant_passages": ["available 99.9 percent of the time in each calendar month"],
+      "reference_answer": "The Services are available 99.9 percent of the time each month; credits are 10 percent of the monthly fee below 99.9 percent and 25 percent below 99.0 percent."
+    },
+    {
+      "question": "Which encryption standards protect customer data?",
+      "relevant_passages": ["encrypt Customer Data at rest using AES-256 and in transit using TLS 1.2 or higher"],
+      "reference_answer": "Customer Data is encrypted at rest with AES-256 and in transit with TLS 1.2 or higher."
+    },
+    {
+      "question": "How fast must customers be told about a personal data breach?",
+      "relevant_passages": [
+        "within forty-eight (48) hours of becoming aware of it",
+        "Personal data breaches are notified to affected customers within 48 hours"
+      ],
+      "reference_answer": "Customers must be notified without undue delay and within 48 hours."
+    },
+    {
+      "question": "Where is customer data stored?",
+      "relevant_passages": ["stored and processed only in data centres located in the European Union"],
+      "reference_answer": "Only in data centres located in the European Union unless the Customer consents otherwise."
+    },
+    {
+      "question": "What is the cap on each party's liability?",
+      "relevant_passages": ["shall not exceed the fees paid or payable in the twelve (12) months preceding the event"],
+      "reference_answer": "Liability is capped at the fees paid or payable in the twelve months preceding the event, except for confidentiality, data protection and indemnification."
+    },
+    {
+      "question": "How long is the minimum password length?",
+      "relevant_passages": ["Passwords must be at least 14 characters long"],
+      "reference_answer": "Passwords must be at least 14 characters long."
+    },
+    {
+      "question": "How often are access rights reviewed?",
+      "relevant_passages": ["Managers review the access rights of their team members every quarter"],
+      "reference_answer": "Managers review access every quarter; production access is reviewed monthly by the security team."
+    },
+    {
+      "question": "Within what time must critical vulnerabilities be patched?",
+      "relevant_passages": ["Critical vulnerabilities in internet-facing systems must be patched within 7 days"],
+      "reference_answer": "Critical vulnerabilities in internet-facing systems must be patched within 7 days."
+    },
+    {
+      "question": "How frequently are production databases backed up and how long are backups kept?",
+      "relevant_passages": ["Production databases are backed up every 6 hours"],
+      "reference_answer": "Every 6 hours, with encrypted backups retained for 35 days in a separate region."
+    },
+    {
+      "question": "How many days of paid annual leave do employees get?",
+      "relevant_passages": ["Full-time employees receive 25 days of paid annual leave per calendar year"],
+      "reference_answer": "Full-time employees receive 25 days of paid annual leave per year."
+    },
+    {
+      "question": "How many days per week can employees work from home?",
+      "relevant_passages": ["Employees may work remotely up to three days per week"],
+      "reference_answer": "Up to three days per week with manager approval."
+    },
+    {
+      "question": "What is the parental leave for primary caregivers?",
+      "relevant_passages": ["Primary caregivers receive 26 weeks of paid parental leave"],
+      "reference_answer": "Primary caregivers receive 26 weeks of paid parental leave."
+    },
+    {
+      "question": "What is the annual learning budget per employee?",
+      "relevant_passages": ["annual learning budget of 1,500 EUR"],
+      "reference_answer": "Each employee has an annual learning budget of 1,500 EUR."
+    },
+    {
+      "question": "When must lost laptops be reported?",
+      "relevant_passages": ["Lost or stolen equipment must be reported to IT within 24 hours"],
+      "reference_answer": "Lost or stolen equipment must be reported to IT within 24 hours."
+    }
+  ]
+}

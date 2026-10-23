@@ -773,8 +773,8 @@ name = "httpcore2"
 version = "2.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "h11" },
-    { name = "truststore" },
+    { name = "h11", marker = "sys_platform != 'emscripten'" },
+    { name = "truststore", marker = "sys_platform != 'emscripten'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c0/61/afa9d6b7452f9eca73f73d45324eb0bb52f098fd5e6049bf6b8263be9b4e/httpcore2-2.16.0.tar.gz", hash = "sha256:c72cd0413563b17e1cd8354677dff887466f8ec2551679759e93126534428643", size = 69886 }
 wheels = [
@@ -2363,6 +2363,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+bench = [
+    { name = "pyarrow" },
+]
 dev = [
     { name = "fakeredis" },
     { name = "pgserver" },
@@ -2399,6 +2402,7 @@ requires-dist = [
     { name = "pgvector", specifier = ">=0.3.2" },
     { name = "prometheus-client", specifier = ">=0.20" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "pyarrow", marker = "extra == 'bench'", specifier = ">=15" },
     { name = "pydantic", specifier = ">=2.8" },
     { name = "pydantic-settings", specifier = ">=2.4" },
     { name = "pyjwt", specifier = ">=2.9" },
@@ -2416,7 +2420,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'ml'", specifier = ">=2.3", index = "https://download.pytorch.org/whl/cpu" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]
-provides-extras = ["ml", "ragas", "dev"]
+provides-extras = ["ml", "bench", "ragas", "dev"]
 
 [[package]]
 name = "rich"

@@ -42,3 +42,22 @@ def dispatch_ingestion(document_id: uuid.UUID, org_id: uuid.UUID, job_id: uuid.U
             logger.exception("celery_dispatch_failed_falling_back_to_thread")
     _thread_pool().submit(run_ingestion, document_id, org_id, job_id)
     return None
+
+
+def dispatch_evaluation(run_id: uuid.UUID, org_id: uuid.UUID) -> str | None:
+    """Start an evaluation run (same execution modes as ingestion)."""
+    from app.services.evaluation.runner import run_evaluation
+
+    mode = get_settings().ingestion_mode
+    if mode == "inline":
+        run_evaluation(run_id, org_id)
+        return None
+    if mode == "celery":
+        try:
+            from app.workers.tasks import run_evaluation_task
+
+            return run_evaluation_task.delay(str(run_id), str(org_id)).id
+        except Exception:
+            logger.exception("celery_dispatch_failed_falling_back_to_thread")
+    _thread_pool().submit(run_evaluation, run_id, org_id)
+    return None

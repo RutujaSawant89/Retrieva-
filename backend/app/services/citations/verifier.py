@@ -32,8 +32,20 @@ from app.services.retrieval.analyzer import content_words
 from app.services.retrieval.types import Evidence
 from app.services.text import split_sentences
 
-_CITATION_GROUP = re.compile(r"\[((?:S\d+)(?:\s*[,;]\s*S\d+)*)\]")
-_LABEL = re.compile(r"S\d+")
+DEFAULT_LABEL_PATTERN = r"S\d+"
+
+
+@lru_cache
+def _patterns(label: str) -> tuple[re.Pattern[str], re.Pattern[str]]:
+    group = re.compile(rf"\[((?:{label})(?:\s*[,;]\s*(?:{label}))*)\]")
+    return group, re.compile(label)
+
+
+def _label_key(label: str) -> tuple[str, int]:
+    match = re.match(r"([A-Za-z]*)(\d+)", label)
+    return (match.group(1), int(match.group(2))) if match else (label, 0)
+
+
 _PAGE_REF = re.compile(r"\b(?:page|p\.)\s*(\d{1,4})\b", re.I)
 _MARKDOWN_PREFIX = re.compile(r"^\s*(?:[-*+]|\d+[.)]|#{1,6}|>)\s*")
 
@@ -134,11 +146,12 @@ class VerificationReport:
         return asdict(self)
 
 
-def strip_citations(text: str) -> str:
-    return _CITATION_GROUP.sub("", text).strip()
+def strip_citations(text: str, label_pattern: str = DEFAULT_LABEL_PATTERN) -> str:
+    return _patterns(label_pattern)[0].sub("", text).strip()
 
 
-def extract_claims(answer: str) -> list[tuple[str, list[str]]]:
+def extract_claims(answer: str, label_pattern: str = DEFAULT_LABEL_PATTERN) -> list[tuple[str, list[str]]]:
+    citation_group, label_re = _patterns(label_pattern)
     claims: list[tuple[str, list[str]]] = []
     for line in answer.split("\n"):
         line = _MARKDOWN_PREFIX.sub("", line).strip()
@@ -146,13 +159,13 @@ def extract_claims(answer: str) -> list[tuple[str, list[str]]]:
             continue
         for sentence in split_sentences(line):
             labels: list[str] = []
-            for group in _CITATION_GROUP.findall(sentence):
-                labels.extend(_LABEL.findall(group))
+            for group in citation_group.findall(sentence):
+                labels.extend(label_re.findall(group))
             claims.append((sentence, list(dict.fromkeys(labels))))
     # A citation at the start of the next sentence fragment (e.g. "...days. [S1]") attaches back.
     merged: list[tuple[str, list[str]]] = []
     for sentence, labels in claims:
-        if merged and not content_words(strip_citations(sentence)) and labels:
+        if merged and not content_words(strip_citations(sentence, label_pattern)) and labels:
             prev_sentence, prev_labels = merged[-1]
             merged[-1] = (f"{prev_sentence} {sentence}", list(dict.fromkeys(prev_labels + labels)))
         else:
@@ -167,8 +180,9 @@ def _page_ok(page: int, item: Evidence) -> bool:
 
 
 class CitationVerifier:
-    def __init__(self, scorer: SupportScorer) -> None:
+    def __init__(self, scorer: SupportScorer, label_pattern: str = DEFAULT_LABEL_PATTERN) -> None:
         self.scorer = scorer
+        self.label_pattern = label_pattern
 
     def verify(self, answer: str, context: AssembledContext) -> VerificationReport:
         by_label = context.by_label()
@@ -179,8 +193,8 @@ class CitationVerifier:
         cited: set[str] = set()
         supporting_labels: set[str] = set()
 
-        for sentence, labels in extract_claims(answer):
-            claim_text = strip_citations(sentence)
+        for sentence, labels in extract_claims(answer, self.label_pattern):
+            claim_text = strip_citations(sentence, self.label_pattern)
             words = content_words(claim_text)
             valid_labels = [lbl for lbl in labels if lbl in by_label]
             invalid_labels = [lbl for lbl in labels if lbl not in by_label]
@@ -256,8 +270,8 @@ class CitationVerifier:
             citation_precision=round(supporting / valid, 4) if valid else None,
             evidence_coverage=round(coverage, 4) if coverage is not None else None,
             unsupported_claims=[c.text for c in factual if c.status in ("unsupported", "uncited")],
-            cited_labels=sorted(cited, key=lambda s: int(s[1:])),
-            supporting_labels=sorted(supporting_labels, key=lambda s: int(s[1:])),
+            cited_labels=sorted(cited, key=_label_key),
+            supporting_labels=sorted(supporting_labels, key=_label_key),
             page_reference_issues=page_issues_all,
             low_support=coverage is not None and coverage < 0.5,
         )
@@ -265,7 +279,7 @@ class CitationVerifier:
 
 
 def _is_label_number(number: str, labels: list[str]) -> bool:
-    return any(number == lbl[1:] for lbl in labels)
+    return any(number == str(_label_key(lbl)[1]) for lbl in labels)
 
 
 @lru_cache

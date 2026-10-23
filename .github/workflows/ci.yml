@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (lint, migrations, tests)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      TEST_DATABASE_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.11"
+          enable-cache: true
+      - name: Install dependencies (no ML extras; tests use deterministic local providers)
+        run: uv sync --frozen --extra dev
+      - name: Lint
+        run: |
+          uv run ruff check app tests scripts
+          uv run ruff format --check app tests scripts
+      - name: Tests (real PostgreSQL + pgvector, RLS enforced through a non-superuser role)
+        run: uv run pytest --cov=app --cov-report=term-missing:skip-covered
+      - name: Migrations are reversible and match the models
+        env:
+          MIGRATION_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/retrieva_test
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/retrieva_test
+        run: |
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+          uv run alembic check
+
+  frontend:
+    name: Frontend (typecheck, lint, unit tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx tsc -b
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: retrieva
+          POSTGRES_PASSWORD: retrieva
+          POSTGRES_DB: retrieva
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U retrieva" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      MIGRATION_DATABASE_URL: postgresql+psycopg://retrieva:retrieva@localhost:5432/retrieva
+      DATABASE_URL: postgresql+psycopg://retrieva_app:retrieva_app@localhost:5432/retrieva
+      REDIS_URL: ""
+      INGESTION_MODE: thread
+      EMBEDDING_PROVIDER: hashing
+      EMBEDDING_MODEL: hashing-v1
+      RERANKER_PROVIDER: lexical
+      LLM_PROVIDER: extractive
+      JWT_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+      LOG_JSON: "false"
+      WARMUP_MODELS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.11"
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Create the runtime database role
+        run: >
+          PGPASSWORD=retrieva psql -h localhost -U retrieva -d retrieva -c
+          "CREATE ROLE retrieva_app LOGIN PASSWORD 'retrieva_app' NOSUPERUSER NOBYPASSRLS;"
+      - name: Start the API
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run alembic upgrade head
+          nohup uv run uvicorn app.main:app --port 8000 > /tmp/api.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:8000/health/ready && break; sleep 1; done
+      - name: Install Playwright
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run end-to-end tests
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+      - name: API log
+        if: failure()
+        run: cat /tmp/api.log
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build backend image (models not baked in CI to keep it fast)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: false
+          build-args: PRELOAD_MODELS=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Validate compose file
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet

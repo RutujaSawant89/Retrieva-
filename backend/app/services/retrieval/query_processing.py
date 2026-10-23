@@ -111,7 +111,7 @@ def _llm_variants(query: str, n: int = 3) -> list[str]:
     return [ln[:300] for ln in lines if len(ln) > 3][:n]
 
 
-def _heuristic_variants(query: str) -> list[str]:
+def heuristic_variants(query: str) -> list[str]:
     """Without an LLM: split compound questions and add a keyword-only form."""
     parts = [
         p.strip()
@@ -178,7 +178,7 @@ def plan(
         variants = _llm_variants(result.search_query)
         method = "llm"
         if not variants:
-            variants = _heuristic_variants(result.search_query)
+            variants = heuristic_variants(result.search_query)
             method = "heuristic"
         if variants:
             result.variants = variants

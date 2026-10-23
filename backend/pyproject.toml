@@ -39,6 +39,8 @@ ml = [
     "sentence-transformers>=3.0",
     "torch>=2.3",
 ]
+# Offline BEIR benchmarks (evaluation/benchmarks).
+bench = ["pyarrow>=15"]
 # Optional RAGAS adapter (requires an LLM provider key at run time).
 ragas = ["ragas>=0.2"]
 dev = [

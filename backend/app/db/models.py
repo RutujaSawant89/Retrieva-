@@ -51,6 +51,7 @@ TENANT_TABLES = (
     "evaluation_results",
     "audit_logs",
     "api_usage",
+    "research_reports",
 )
 
 
@@ -562,3 +563,33 @@ class ApiUsage(UUIDPrimaryKey, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), default=utcnow
     )
+
+
+# --------------------------------------------------------------------------------------
+# Research
+# --------------------------------------------------------------------------------------
+
+
+class ResearchReport(UUIDPrimaryKey, Timestamps, SoftDelete, Base):
+    """A multi-step research run: sub-queries, merged evidence, a cited report and its verification."""
+
+    __tablename__ = "research_reports"
+    __table_args__ = (
+        Index("ix_research_reports_org_user_created", "organization_id", "user_id", "created_at"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="running")
+    scope: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    subqueries: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)
+    report: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    evidence: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)
+    conflicts: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)
+    verification: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    llm_provider: Mapped[str | None] = mapped_column(String(64))
+    llm_model: Mapped[str | None] = mapped_column(String(200))
+    total_ms: Mapped[float | None] = mapped_column(Float)

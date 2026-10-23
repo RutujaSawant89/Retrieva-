@@ -22,6 +22,9 @@ def get_engine() -> Engine:
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,
         future=True,
+        # Day bucketing (date_trunc) and timestamps must agree with the API's UTC clock.
+        # "GMT" is built into PostgreSQL and works even on builds without a tz database.
+        connect_args={"options": "-c timezone=GMT"},
     )
     return engine
 

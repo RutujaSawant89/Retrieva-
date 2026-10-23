@@ -1,0 +1,35 @@
+# Development overrides: hot reload, exposed database/redis, readable logs, no secure cookies.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# The frontend is usually run with `npm run dev` on the host (http://localhost:5173), which
+# proxies /api to the API published on :8000 here.
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  api:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "app"]
+    environment:
+      ENVIRONMENT: development
+      LOG_JSON: "false"
+      COOKIE_SECURE: "false"
+      CORS_ORIGINS: http://localhost:5173,http://localhost:8080
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/alembic:/app/alembic:ro
+    ports:
+      - "8000:8000"
+
+  worker:
+    environment:
+      ENVIRONMENT: development
+      LOG_JSON: "false"
+    volumes:
+      - ./backend/app:/app/app:ro

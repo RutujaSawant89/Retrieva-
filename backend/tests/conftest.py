@@ -106,7 +106,7 @@ _TRUNCATE = (
     "organizations, users, organization_members, organization_invitations, refresh_tokens, documents, "
     "document_chunks, document_collections, collection_documents, conversations, messages, "
     "message_citations, ingestion_jobs, search_queries, evaluation_datasets, evaluation_runs, "
-    "evaluation_results, audit_logs, api_usage"
+    "evaluation_results, audit_logs, api_usage, research_reports"
 )
 
 

@@ -360,3 +360,204 @@ export interface CollectionOut {
   document_count: number
   can_modify: boolean
 }
+
+/* ------------------------------------------------------------------ analytics */
+
+export interface NameValue {
+  name: string
+  value: number
+}
+
+export interface AnalyticsOverview {
+  documents: {
+    total: number
+    indexed: number
+    processing: number
+    failed: number
+    chunks: number
+    storage_bytes: number
+    by_type: NameValue[]
+    by_status: NameValue[]
+  }
+  failed_ingestion_jobs: number
+  queries: { total: number; retrieval_success_rate: number | null; avg_retrieval_ms: number | null }
+  answers: {
+    total: number
+    abstained: number
+    abstention_rate: number | null
+    avg_generation_ms: number | null
+    avg_total_ms: number | null
+    citation_validity_rate: number | null
+    evidence_coverage: number | null
+  }
+  conversations: number
+}
+
+export interface RetrievalAnalytics {
+  days: number
+  latency: { date: string; avg_ms: number | null; p50_ms: number | null; p95_ms: number | null; queries: number }[]
+  response_latency: { date: string; generation_ms: number | null; total_ms: number | null }[]
+  by_strategy: {
+    strategy: string
+    queries: number
+    avg_ms: number | null
+    p95_ms: number | null
+    success_rate: number | null
+  }[]
+  by_kind: NameValue[]
+  stage_ms: { stage: string; avg_ms: number; samples: number }[]
+}
+
+export interface UsageAnalytics {
+  days: number
+  active_users: number
+  series: {
+    date: string
+    queries: number
+    uploads: number
+    failures: number
+    conversations: number
+    api_calls: number
+    prompt_tokens: number
+    completion_tokens: number
+  }[]
+}
+
+/* ------------------------------------------------------------------ evaluation */
+
+export interface EvalDataset {
+  id: string
+  name: string
+  version: number
+  description: string
+  item_count: number
+  created_at: string
+}
+
+export interface EvalItem {
+  question: string
+  relevant_passages: string[]
+  relevant_documents: string[]
+  reference_answer: string | null
+}
+
+export type MetricValue = number | null
+
+export interface EvalRun {
+  id: string
+  dataset_id: string
+  dataset_version: number
+  name: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  config: {
+    experiment?: string
+    group?: string
+    retrieval?: Partial<RetrievalOptions>
+    ks?: number[]
+    generate?: boolean
+    use_ragas?: boolean
+    chunking?: Record<string, unknown>
+  }
+  embedding_model: string
+  reranker_model: string | null
+  llm_provider: string | null
+  llm_model: string | null
+  metrics: Record<string, unknown>
+  error_message: string | null
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+}
+
+export interface EvalRunDetail extends EvalRun {
+  results: {
+    item_index: number
+    question: string
+    answer: string | null
+    metrics: Record<string, number | boolean | null>
+    retrieved: {
+      rank: number
+      document_title: string
+      page: number | null
+      relevant: boolean
+      score: number
+      excerpt: string
+    }[]
+    latency_ms: number
+  }[]
+}
+
+export interface EvalPreset {
+  label: string
+  experiments: { name: string; options: Partial<RetrievalOptions> }[]
+}
+
+/* ------------------------------------------------------------------ research & compare */
+
+export interface ResearchSummary {
+  id: string
+  question: string
+  status: string
+  created_at: string
+  total_ms: number | null
+}
+
+export interface ResearchSubquery {
+  index: number
+  query: string
+  results: number
+  decisions: string[]
+  total_ms: number
+  labels?: string[]
+}
+
+export interface ResearchReport {
+  id: string
+  question: string
+  status: string
+  subqueries: ResearchSubquery[]
+  report: string
+  evidence: EvidenceOut[]
+  conflicts: { labels: string[]; reason: string }[]
+  verification: VerificationReport | Record<string, never>
+  llm_provider: string | null
+  llm_model: string | null
+  total_ms: number | null
+  created_at: string
+}
+
+export interface ComparePassage {
+  label: string
+  chunk_id: string
+  document_id: string
+  text: string
+  page: number | null
+  section: string | null
+  start: number
+  end: number
+}
+
+export interface CompareResult {
+  documents: { id: string; title: string; chunks: number }[]
+  alignments: {
+    kind: 'same' | 'changed' | 'only_a'
+    similarity: number
+    a: ComparePassage
+    b: ComparePassage | null
+    figures?: { a: string[]; b: string[] }
+  }[]
+  only_b: ComparePassage[]
+  contradictions: { a: string; b: string; similarity: number; reason: string }[]
+  stats: {
+    same?: number
+    changed?: number
+    only_a?: number
+    only_b?: number
+    a_coverage?: number
+    b_coverage?: number
+    note?: string
+  }
+  summary: string | null
+  summary_verification: VerificationReport | Record<string, never>
+  summary_note: string | null
+}

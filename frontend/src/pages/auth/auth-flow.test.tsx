@@ -31,7 +31,7 @@ describe('authentication flow', () => {
     await user.type(screen.getByLabelText('Password'), 'Sup3r-Secret-Pass!')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Ada' })).toBeInTheDocument()
     const loginCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/auth/login'))
     expect(JSON.parse(String(loginCall?.[1]?.body))).toMatchObject({ email: 'ada@acme.example.com' })
   })
@@ -52,7 +52,7 @@ describe('authentication flow', () => {
   it('restores a session from the refresh cookie on load', async () => {
     mockFetch({ 'POST /api/v1/auth/refresh': () => jsonResponse(makeSession()) })
     renderWithProviders(<AppRoutes />, { route: '/app' })
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Welcome back, Ada' })).toBeInTheDocument())
   })
 
   it('keeps the register button disabled until the password policy is met', async () => {
