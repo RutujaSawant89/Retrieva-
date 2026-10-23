@@ -210,6 +210,8 @@ function InvitationsTab() {
   const [created, setCreated] = useState<InvitationOut | null>(null)
 
   const query = useQuery({ queryKey: ['admin', 'invitations'], queryFn: adminApi.invitations })
+  // Expiry is judged against the time the list was fetched, keeping render pure.
+  const now = query.dataUpdatedAt
   const invite = useMutation({
     mutationFn: () => adminApi.invite(email, role),
     onSuccess: (invitation) => {
@@ -293,7 +295,7 @@ function InvitationsTab() {
         ) : (
           <ul className="divide-y divide-border">
             {query.data.map((inv) => {
-              const expired = new Date(inv.expires_at).getTime() < Date.now()
+              const expired = new Date(inv.expires_at).getTime() < now
               return (
                 <li key={inv.id} className="flex items-center gap-4 px-5 py-3 text-sm">
                   <div className="min-w-0 flex-1">

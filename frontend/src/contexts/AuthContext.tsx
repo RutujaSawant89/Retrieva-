@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { authApi, type RegisterInput } from '@/services/auth'
-import { ApiError, refreshOnce, setAccessToken, setRefreshHandler } from '@/services/http'
+import { ApiError, getAccessToken, refreshOnce, setAccessToken, setRefreshHandler } from '@/services/http'
 import type { SessionOut } from '@/types/api'
 
 type Status = 'loading' | 'authenticated' | 'anonymous'
@@ -10,6 +10,8 @@ type Status = 'loading' | 'authenticated' | 'anonymous'
 interface AuthContextValue {
   status: Status
   session: SessionOut | null
+  /** True when the last attempt to reach the API failed for a reason other than authentication. */
+  serverUnreachable: boolean
   login: (email: string, password: string) => Promise<SessionOut>
   register: (input: RegisterInput) => Promise<SessionOut>
   logout: () => Promise<void>
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [session, setSession] = useState<SessionOut | null>(null)
   const [status, setStatus] = useState<Status>('loading')
+  const [serverUnreachable, setServerUnreachable] = useState(false)
   const timer = useRef<number | undefined>(undefined)
 
   const apply = useCallback((next: SessionOut | null) => {
@@ -57,11 +60,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRefreshHandler(async () => {
       try {
         const next = await exchangeRefreshCookie()
+        setServerUnreachable(false)
         apply(next)
         return next.access_token
-      } catch {
+      } catch (error) {
+        const rejected = error instanceof ApiError && (error.status === 401 || error.status === 403)
+        setServerUnreachable(!rejected)
+        if (!rejected && getAccessToken() !== null) {
+          // Server unreachable or failing: keep the session and try again shortly.
+          window.clearTimeout(timer.current)
+          timer.current = window.setTimeout(() => void refreshOnce(), 15_000)
+          return null
+        }
         apply(null)
         queryClient.clear()
+        if (!rejected) {
+          // Could not reach the API at all: keep trying so a restored server signs the user back in.
+          timer.current = window.setTimeout(() => void refreshOnce(), 5_000)
+        }
         return null
       }
     })
@@ -116,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       status,
       session,
+      serverUnreachable,
       login,
       register,
       logout,
@@ -123,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateSession,
       can: (permission: string) => session?.permissions.includes(permission) ?? false,
     }),
-    [status, session, login, register, logout, switchOrganization, updateSession],
+    [status, session, serverUnreachable, login, register, logout, switchOrganization, updateSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

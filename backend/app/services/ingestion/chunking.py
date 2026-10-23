@@ -296,7 +296,9 @@ def chunk_structure(doc: ExtractedDocument, cfg: ChunkingConfig, count: TokenCou
         if window:
             chunks.append(_make_chunk(window, len(chunks), count))
 
-    # Merge tiny chunks into the previous chunk of the same parent section.
+    # Merge tiny chunks into the previous chunk of the same parent section. A merged chunk
+    # spans sibling sections, so its heading path becomes their common parent and each part
+    # keeps its own heading inline — the citation location must never name only one of them.
     merged: list[Chunk] = []
     for chunk in chunks:
         prev = merged[-1] if merged else None
@@ -306,7 +308,16 @@ def chunk_structure(doc: ExtractedDocument, cfg: ChunkingConfig, count: TokenCou
             and prev.heading_path[:-1] == chunk.heading_path[:-1]
             and len(prev.text) + len(chunk.text) <= cfg.chunk_size * 1.25
         ):
-            prev.text = f"{prev.text}\n\n{chunk.text}"
+            if prev.heading_path != chunk.heading_path and chunk.heading_path:
+                sections = list(prev.metadata.get("sections") or prev.heading_path[-1:])
+                if "sections" not in prev.metadata and prev.heading_path:
+                    prev.text = f"{prev.heading_path[-1]}\n{prev.text}"
+                sections.append(chunk.heading_path[-1])
+                prev.metadata["sections"] = sections
+                prev.heading_path = chunk.heading_path[:-1]
+                prev.text = f"{prev.text}\n\n{chunk.heading_path[-1]}\n{chunk.text}"
+            else:
+                prev.text = f"{prev.text}\n\n{chunk.text}"
             prev.end = chunk.end
             prev.token_count = count(prev.text)
             if chunk.page_end is not None:

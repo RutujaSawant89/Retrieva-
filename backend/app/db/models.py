@@ -413,8 +413,12 @@ class MessageCitation(UUIDPrimaryKey, Base):
     document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"))
     document_title: Mapped[str] = mapped_column(String(500), nullable=False)
     page_number: Mapped[int | None] = mapped_column(Integer)
+    page_end: Mapped[int | None] = mapped_column(Integer)
     section: Mapped[str | None] = mapped_column(String(500))
     passage: Mapped[str] = mapped_column(Text, nullable=False)
+    # Offsets into the document's extracted text, for "open at cited passage".
+    start_char: Mapped[int | None] = mapped_column(Integer)
+    end_char: Mapped[int | None] = mapped_column(Integer)
     retrieval_score: Mapped[float | None] = mapped_column(Float)
     rerank_score: Mapped[float | None] = mapped_column(Float)
     cited_in_answer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

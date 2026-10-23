@@ -9,7 +9,7 @@ import { ApiError } from '@/services/http'
 import { AuthLayout } from './AuthLayout'
 
 export function LoginPage() {
-  const { login } = useAuth()
+  const { login, serverUnreachable } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [email, setEmail] = useState('')
@@ -46,6 +46,11 @@ export function LoginPage() {
         </>
       }
     >
+      {serverUnreachable && (
+        <p className="mb-4 rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning" role="status">
+          The Retrieva API is not reachable right now. Retrying automatically…
+        </p>
+      )}
       <form className="space-y-4" onSubmit={onSubmit} noValidate>
         <Field label="Work email" htmlFor="email">
           <Input

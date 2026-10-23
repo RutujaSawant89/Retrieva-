@@ -1,7 +1,7 @@
 import { Building2, Check, ChevronsUpDown, LogOut, Menu, Monitor, Moon, Sun, User, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { useState } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { Logo } from '@/components/brand/Logo'
@@ -162,10 +162,6 @@ function UserMenu() {
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const location = useLocation()
-
-  useEffect(() => setMobileOpen(false), [location.pathname])
-
   return (
     <div className="flex h-full">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface lg:flex">

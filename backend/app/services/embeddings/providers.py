@@ -90,7 +90,10 @@ class SentenceTransformerProvider(EmbeddingProvider):
 
                     logger.info("loading_embedding_model", extra={"model": self.name})
                     model = SentenceTransformer(self.name, device="cpu")
-                    dimension_of = getattr(model, "get_embedding_dimension", None) or model.get_sentence_embedding_dimension
+                    dimension_of = (
+                        getattr(model, "get_embedding_dimension", None)
+                        or model.get_sentence_embedding_dimension
+                    )
                     actual = dimension_of()
                     if actual != self.dimension:
                         raise ValueError(

@@ -33,10 +33,18 @@ class JsonFormatter(logging.Formatter):
 
 
 class TextFormatter(logging.Formatter):
+    """Human-readable lines for development; structured fields are appended as key=value."""
+
     def format(self, record: logging.LogRecord) -> str:
-        cid = correlation_id_var.get()
         base = super().format(record)
-        return f"{base} [cid={cid}]" if cid else base
+        extras = " ".join(
+            f"{key}={value}"
+            for key, value in record.__dict__.items()
+            if key not in _RESERVED and not key.startswith("_")
+        )
+        cid = correlation_id_var.get()
+        parts = [base, extras, f"[cid={cid}]" if cid else ""]
+        return " ".join(p for p in parts if p)
 
 
 def configure_logging(level: str = "INFO", json_logs: bool = True) -> None:

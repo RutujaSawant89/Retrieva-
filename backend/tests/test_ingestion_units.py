@@ -163,3 +163,21 @@ def test_semantic_chunking_splits_on_topic_shift():
 def test_invalid_chunking_config_rejected():
     with pytest.raises(ValueError):
         chunk_document(_long_doc(), ChunkingConfig(chunk_size=500, chunk_overlap=400))
+
+
+def test_tiny_sibling_sections_merge_with_honest_location():
+    blocks = [
+        Block(text="Handbook", kind="heading", level=1),
+        Block(text="Remote Work", kind="heading", level=2),
+        Block(
+            text="Employees may work remotely up to three days per week with manager approval. " * 2,
+            kind="paragraph",
+        ),
+        Block(text="Equipment", kind="heading", level=2),
+        Block(text="Laptops are refreshed every three years.", kind="paragraph"),
+    ]
+    doc = ExtractedDocument(blocks=blocks).finalize()
+    [chunk] = chunk_document(doc, ChunkingConfig(strategy="structure", chunk_size=900, chunk_overlap=0))
+    assert chunk.heading_path == ["Handbook"]
+    assert chunk.section == "Remote Work / Equipment"
+    assert "Equipment\nLaptops are refreshed" in chunk.text

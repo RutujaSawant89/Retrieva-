@@ -77,4 +77,7 @@ class Chunk:
 
     @property
     def section(self) -> str | None:
+        sections = self.metadata.get("sections")
+        if sections:
+            return " / ".join(str(s) for s in sections)
         return self.heading_path[-1] if self.heading_path else None

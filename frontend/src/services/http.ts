@@ -155,6 +155,20 @@ export const http = {
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 }
 
+/** Download an authenticated file and hand it to the browser as a named file. */
+export async function downloadFile(path: string, filename: string, options: RequestOptions = {}): Promise<void> {
+  const response = await rawRequest(path, options)
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1_000)
+}
+
 /**
  * Upload with progress reporting. `fetch` cannot report upload progress, so this uses XHR.
  */

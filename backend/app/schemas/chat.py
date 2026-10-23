@@ -63,8 +63,11 @@ class CitationOut(ORMModel):
     document_id: uuid.UUID | None
     document_title: str
     page_number: int | None
+    page_end: int | None
     section: str | None
     passage: str
+    start_char: int | None
+    end_char: int | None
     retrieval_score: float | None
     rerank_score: float | None
     cited_in_answer: bool

@@ -37,11 +37,13 @@ export interface ButtonProps
   ref?: Ref<HTMLButtonElement>
 }
 
-export function Button({ className, variant, size, asChild, loading, disabled, children, ...props }: ButtonProps) {
+export function Button({ className, variant, size, asChild, loading, disabled, children, type, ...props }: ButtonProps) {
   const Comp = asChild ? Slot : 'button'
   return (
     <Comp
       className={cn(buttonVariants({ variant, size }), className)}
+      // Plain buttons never submit forms implicitly; submit buttons must say so.
+      type={asChild ? undefined : (type ?? 'button')}
       disabled={asChild ? undefined : disabled || loading}
       aria-busy={loading || undefined}
       {...props}
@@ -58,4 +60,3 @@ export function Button({ className, variant, size, asChild, loading, disabled, c
   )
 }
 
-export { buttonVariants }
