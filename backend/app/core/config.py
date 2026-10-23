@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     redis_url: str | None = "redis://localhost:6379/0"
     celery_broker_url: str | None = None
     celery_task_always_eager: bool = False
+    # How ingestion jobs run: "celery" (workers, production), "thread" (in-process background
+    # thread, development without Redis), "inline" (synchronously in the request; tests).
+    ingestion_mode: Literal["celery", "thread", "inline"] = "celery"
 
     # --- Security ----------------------------------------------------------------------
     jwt_secret: str = "change-me-in-development-only-0123456789abcdef"  # noqa: S105 (rejected in production)
@@ -85,8 +88,21 @@ class Settings(BaseSettings):
     llm_base_url: str | None = None
     llm_temperature: float = 0.1
     llm_max_tokens: int = 900
-    llm_timeout_seconds: float = 60.0
+    # Read timeout per streamed chunk; CPU-only local models can need minutes for long prompts.
+    llm_timeout_seconds: float = 180.0
     context_token_budget: int = 2400
+    # Optional NLI cross-encoder for claim support (e.g. cross-encoder/nli-deberta-v3-xsmall).
+    # Empty uses the lexical + embedding support scorer.
+    verifier_nli_model: str = ""
+    # Abstain before generation when the best reranked passage scores below this value.
+    # Cross-encoder logits (MS MARCO) — about -4 is "probably unrelated".
+    lexical_abstain_threshold: float = 0.6
+
+    # --- Models ------------------------------------------------------------------------
+    # Load embedding/reranker models in the background at startup so the first request is fast.
+    warmup_models: bool = True
+    # Use only locally cached Hugging Face models (no network checks on load).
+    hf_offline: bool = False
 
     # --- Observability -----------------------------------------------------------------
     otel_enabled: bool = False

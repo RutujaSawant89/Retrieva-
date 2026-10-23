@@ -75,6 +75,7 @@ os.environ.update(
         "MIGRATION_DATABASE_URL": _ADMIN_URL.replace("postgresql://", "postgresql+psycopg://"),
         "REDIS_URL": "",
         "CELERY_TASK_ALWAYS_EAGER": "true",
+        "INGESTION_MODE": "inline",
         "STORAGE_DIR": str(_STORAGE),
         "EMBEDDING_PROVIDER": "hashing",
         "EMBEDDING_MODEL": "hashing-v1",

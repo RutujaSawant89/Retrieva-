@@ -71,7 +71,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "SIM"]
-ignore = ["S101", "B008", "S311", "UP046"]
+# Line length is enforced by `ruff format`; long string literals are left intact.
+ignore = ["S101", "B008", "S311", "UP046", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106", "S608"]
