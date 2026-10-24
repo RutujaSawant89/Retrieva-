@@ -25,9 +25,17 @@ from app.services.embeddings.service import get_embedding_service
 from app.services.generation import memory
 from app.services.generation.context import AssembledContext, assemble, location
 from app.services.generation.extractive import extractive_answer
+from app.services.generation.overview import (
+    choose_documents,
+    extractive_overview,
+    is_overview_question,
+    opening_passages,
+    overview_instruction,
+)
 from app.services.generation.prompts import ABSTAIN_MARKER, build_messages
 from app.services.generation.providers import LLMError, Usage, get_llm
-from app.services.retrieval.pipeline import RetrievalPipeline, log_query
+from app.services.retrieval import stores
+from app.services.retrieval.pipeline import RetrievalPipeline, _mentioned_documents, log_query
 from app.services.retrieval.types import Evidence, RetrievalConfig, RetrievalResult, RetrievalScope
 
 logger = logging.getLogger(__name__)
@@ -167,9 +175,23 @@ def answer_events(req: AnswerRequest) -> Iterator[Event]:
             logger.exception("retrieval_failed")
             yield "error", {"code": "retrieval_failed", "message": "Retrieval failed. Please try again."}
             return
+        overview_mode = is_overview_question(req.question)
+        if overview_mode:
+            # Whole-document questions: ground the answer in the document's opening passages
+            # instead of passages that happen to match the question's wording.
+            hinted = _mentioned_documents(db, stores.allowed_document_ids(db, req.scope), req.question)
+            document_ids, note = choose_documents(db, req.scope, hinted)
+            opening = opening_passages(db, req.scope, document_ids) if document_ids else []
+            if opening:
+                result.evidence = opening
+                result.decisions.append(note)
+            else:
+                overview_mode = False
         retrieval_ms = result.total_ms
 
-        decision = abstention_gate(result)
+        # Overview answers rest on the opening passages, which are not "relevant" to the question
+        # wording; only the no-evidence check applies to them.
+        decision = AbstentionDecision(False) if overview_mode else abstention_gate(result)
         context = None if decision.abstain else assemble(result.evidence, settings.context_token_budget)
         if decision.abstain:
             # Still show the closest passages so the user can see why.
@@ -198,7 +220,11 @@ def answer_events(req: AnswerRequest) -> Iterator[Event]:
             ABSTENTIONS.labels(decision.reason or "unknown").inc()
             yield "token", {"delta": answer}
         elif llm is None:
-            text = extractive_answer(req.question, context, get_embedding_service())  # type: ignore[arg-type]
+            text = (
+                extractive_overview(context)  # type: ignore[arg-type]
+                if overview_mode
+                else extractive_answer(req.question, context, get_embedding_service())  # type: ignore[arg-type]
+            )
             if text is None:
                 status = "abstained"
                 decision = AbstentionDecision(True, "no_matching_sentences")
@@ -209,7 +235,7 @@ def answer_events(req: AnswerRequest) -> Iterator[Event]:
             yield "token", {"delta": answer}
         else:
             messages = build_messages(
-                req.question,
+                overview_instruction(req.question) if overview_mode else req.question,
                 context,
                 history,
                 memory_summary=conversation.summary,  # type: ignore[arg-type]

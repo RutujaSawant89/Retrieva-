@@ -152,25 +152,34 @@ def strip_citations(text: str, label_pattern: str = DEFAULT_LABEL_PATTERN) -> st
 
 def extract_claims(answer: str, label_pattern: str = DEFAULT_LABEL_PATTERN) -> list[tuple[str, list[str]]]:
     citation_group, label_re = _patterns(label_pattern)
+    leading = re.compile(rf"^\s*((?:{citation_group.pattern}\s*)+)")
+
+    def labels_in(text: str) -> list[str]:
+        found: list[str] = []
+        for group in citation_group.findall(text):
+            found.extend(label_re.findall(group))
+        return found
+
     claims: list[tuple[str, list[str]]] = []
     for line in answer.split("\n"):
         line = _MARKDOWN_PREFIX.sub("", line).strip()
         if not line or set(line) <= set("|-: "):
             continue
         for sentence in split_sentences(line):
-            labels: list[str] = []
-            for group in citation_group.findall(sentence):
-                labels.extend(label_re.findall(group))
-            claims.append((sentence, list(dict.fromkeys(labels))))
-    # A citation at the start of the next sentence fragment (e.g. "...days. [S1]") attaches back.
-    merged: list[tuple[str, list[str]]] = []
-    for sentence, labels in claims:
-        if merged and not content_words(strip_citations(sentence, label_pattern)) and labels:
-            prev_sentence, prev_labels = merged[-1]
-            merged[-1] = (f"{prev_sentence} {sentence}", list(dict.fromkeys(prev_labels + labels)))
-        else:
-            merged.append((sentence, labels))
-    return merged
+            # "...the Provider. [S1] The Customer..." splits after the full stop, leaving [S1] at the
+            # start of the next sentence; a leading citation belongs to the sentence before it.
+            match = leading.match(sentence)
+            if match and claims:
+                prev_sentence, prev_labels = claims[-1]
+                claims[-1] = (
+                    f"{prev_sentence} {match.group(1).strip()}",
+                    list(dict.fromkeys(prev_labels + labels_in(match.group(1)))),
+                )
+                sentence = sentence[match.end() :].strip()
+                if not sentence:
+                    continue
+            claims.append((sentence, list(dict.fromkeys(labels_in(sentence)))))
+    return claims
 
 
 def _page_ok(page: int, item: Evidence) -> bool:

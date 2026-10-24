@@ -228,3 +228,10 @@ def test_lexical_match_strength_is_query_length_independent():
     assert lexical_match_strength(index, long_query, score) > 0.8
     [(_, weak)] = index.search("termination severance package", top_k=1)
     assert lexical_match_strength(index, "termination severance package", weak) < 0.35
+
+
+def test_citations_after_full_stop_attach_to_the_preceding_sentence():
+    answer = "The fee is 48,000 USD. [S1] Notice is ninety days. [S2][S3] Payment is due in thirty days [S4]."
+    claims = extract_claims(answer)
+    assert [labels for _, labels in claims] == [["S1"], ["S2", "S3"], ["S4"]]
+    assert claims[1][0].startswith("Notice is ninety days.")
