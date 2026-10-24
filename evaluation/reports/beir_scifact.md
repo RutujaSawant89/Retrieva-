@@ -13,4 +13,8 @@ Embedding model `BAAI/bge-small-en-v1.5` · reranker `cross-encoder/ms-marco-Min
 
 Latency is per query on CPU and excludes network and database overhead; hybrid latency is the sum of its BM25 and dense components. Indexing: BM25 9.53 s, embeddings 1865.9 s.
 
+The rerank latency was measured while other workloads (the test suite and an in-product evaluation) were running on the same CPU, so it is an upper bound rather than a representative figure.
+
+On SciFact the MS MARCO cross-encoder lowers nDCG@10 relative to plain hybrid retrieval (0.6995 vs 0.7235): the reranker was trained on web search queries, while SciFact queries are scientific claims. This is why reranking is a toggle that should be validated per corpus with the evaluation framework rather than always enabled.
+
 Reproduce: `cd backend && uv run python ../evaluation/benchmarks/beir_benchmark.py --dataset scifact`

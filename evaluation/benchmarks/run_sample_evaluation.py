@@ -134,6 +134,10 @@ def main() -> int:
         lines.append(f"| {run['name']} | " + " | ".join(cells) + " |")
     lines += [
         "",
+        "Latency is the mean end-to-end retrieval time per question measured by the API on a laptop CPU, "
+        "with the four configurations running concurrently, so it includes database access and CPU "
+        "contention; compare it across rows, not as an isolated per-query figure.",
+        "",
         "This corpus is deliberately small (a few dozen chunks), so differences between strategies are",
         "smaller and noisier than on a realistic collection; see `beir_scifact.md` for a larger benchmark.",
     ]
