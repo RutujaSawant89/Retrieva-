@@ -4,18 +4,19 @@
 
 /* Brand + semantic tokens. Components only use the semantic names. */
 :root {
-  --background: #f7f9fc;
+  --background: #f8f9fc;
   --surface: #ffffff;
-  --surface-2: #f2f4f7;
+  --surface-2: #f2f4f8;
   --foreground: #101828;
   --muted-foreground: #667085;
-  --border: #e4e7ec;
+  --border: #e9ebf2;
   --border-strong: #d0d5dd;
-  --primary: #315efb;
-  --primary-hover: #2449d8;
+  /* Electric indigo brand accent with a soft blue secondary. */
+  --primary: #5146e5;
+  --primary-hover: #4338ca;
   --primary-foreground: #ffffff;
-  --primary-soft: #eef2ff;
-  --accent: #5b8cff;
+  --primary-soft: #eef0ff;
+  --accent: #6b8afd;
   --navy: #101828;
   --success: #12b76a;
   --success-soft: #ecfdf3;
@@ -23,8 +24,8 @@
   --warning-soft: #fffaeb;
   --danger: #f04438;
   --danger-soft: #fef3f2;
-  --ring: #5b8cff;
-  --evidence: #f5f8ff;
+  --ring: #6d64f0;
+  --evidence: #f6f6ff;
   --shadow-color: 16 24 40;
   /* Chart series: validated categorical palette (light surface). */
   --series-1: #2a78d6;
@@ -44,19 +45,19 @@
   --muted-foreground: #98a2b3;
   --border: #22304a;
   --border-strong: #2e3d5a;
-  --primary: #5b8cff;
-  --primary-hover: #7aa2ff;
+  --primary: #8f88f8;
+  --primary-hover: #a9a4fa;
   --primary-foreground: #0b1120;
-  --primary-soft: #1a2a52;
-  --accent: #8fb0ff;
+  --primary-soft: #23214d;
+  --accent: #8fa9ff;
   --success: #32d583;
   --success-soft: #0f2e22;
   --warning: #fdb022;
   --warning-soft: #33250c;
   --danger: #f97066;
   --danger-soft: #3a1513;
-  --ring: #5b8cff;
-  --evidence: #132042;
+  --ring: #8f88f8;
+  --evidence: #17183a;
   --shadow-color: 0 0 0;
   /* Same hues stepped for the dark surface (validated separately). */
   --series-1: #3987e5;
@@ -179,4 +180,33 @@
   border-left: 3px solid var(--border-strong);
   padding-left: 0.8em;
   color: var(--muted-foreground);
+}
+
+/* Subtle entrance for page content; disabled for users who prefer reduced motion. */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page-enter {
+  animation: page-enter 220ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Thin, unobtrusive scrollbars inside panels. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }

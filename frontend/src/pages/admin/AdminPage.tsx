@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, MailPlus, Search, Trash2, UserMinus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import {
   PageHeader,
   Skeleton,
 } from '@/components/ui/primitives'
+import { Disclosure } from '@/components/ui/help'
 import { Pagination } from '@/components/ui/table'
 import { useAuth } from '@/contexts/AuthContext'
 import { adminApi } from '@/services/admin'
@@ -36,22 +38,30 @@ const ROLE_OPTIONS: { value: RoleName; label: string }[] = [
   { value: 'viewer', label: 'Viewer' },
 ]
 
+const TAB_META: Record<string, { title: string; description: string }> = {
+  members: { title: 'Users & Roles', description: 'Who has access to this workspace and what each person can do.' },
+  invitations: { title: 'Users & Roles', description: 'Invite colleagues with a link; invitations expire after 7 days.' },
+  audit: { title: 'Activity & Audit Log', description: 'Sign-ins, uploads, downloads, deletions, exports and permission changes.' },
+  organization: { title: 'Workspace Settings', description: 'Name and details of this workspace.' },
+}
+
 export function AdminPage() {
+  const [params, setParams] = useSearchParams()
+  const tab = TAB_META[params.get('tab') ?? ''] ? params.get('tab')! : 'members'
+  const meta = TAB_META[tab]
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
-      <PageHeader
-        title="Organization"
-        description="Members, roles, invitations and the audit trail for your organization."
-      />
-      <Tabs defaultValue="members">
-        <TabsList>
-          <TabsTrigger value="members">Members</TabsTrigger>
+    <div className="page-enter mx-auto max-w-6xl px-4 py-8 lg:px-8">
+      <PageHeader title={meta.title} description={meta.description} />
+      <Tabs value={tab} onValueChange={(value) => setParams({ tab: value }, { replace: true })}>
+        <TabsList className="max-w-full overflow-x-auto">
+          <TabsTrigger value="members">People</TabsTrigger>
           <TabsTrigger value="invitations">Invitations</TabsTrigger>
-          <TabsTrigger value="audit">Audit log</TabsTrigger>
-          <TabsTrigger value="organization">Settings</TabsTrigger>
+          <TabsTrigger value="audit">Activity log</TabsTrigger>
+          <TabsTrigger value="organization">Workspace</TabsTrigger>
         </TabsList>
-        <TabsContent value="members" className="mt-5">
+        <TabsContent value="members" className="mt-5 space-y-6">
           <MembersTab />
+          <RolesGuide />
         </TabsContent>
         <TabsContent value="invitations" className="mt-5">
           <InvitationsTab />
@@ -64,6 +74,28 @@ export function AdminPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+const ROLE_SUMMARY: { role: RoleName; summary: string }[] = [
+  { role: 'admin', summary: 'Everything, including people, roles, the audit log and workspace settings.' },
+  { role: 'analyst', summary: 'Upload documents, chat, research, run search-quality evaluations and view analytics.' },
+  { role: 'researcher', summary: 'Upload documents, build collections, chat and run research.' },
+  { role: 'viewer', summary: 'Search and chat over documents shared with the workspace. Cannot upload or delete.' },
+]
+
+function RolesGuide() {
+  return (
+    <Disclosure title="What can each role do?" description="Roles take effect immediately — no need to sign out.">
+      <dl className="grid gap-3 sm:grid-cols-2">
+        {ROLE_SUMMARY.map((r) => (
+          <div key={r.role} className="rounded-lg bg-surface-2 p-3">
+            <dt className="text-[13px] font-medium capitalize">{r.role}</dt>
+            <dd className="mt-0.5 text-xs text-muted-foreground">{r.summary}</dd>
+          </div>
+        ))}
+      </dl>
+    </Disclosure>
   )
 }
 

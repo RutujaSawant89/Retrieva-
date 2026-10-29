@@ -38,7 +38,7 @@ export function StatTile({
   icon,
   tone,
 }: {
-  label: string
+  label: ReactNode
   value: ReactNode
   hint?: ReactNode
   icon?: ReactNode

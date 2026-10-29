@@ -114,7 +114,7 @@ experiment.
 ## Tests
 
 ```bash
-cd backend && uv run pytest          # 99 tests on real PostgreSQL + pgvector, RLS enforced
+cd backend && uv run pytest          # 114 tests on real PostgreSQL + pgvector, RLS enforced
 cd frontend && npm test              # Vitest unit and component tests
 cd frontend && npm run test:e2e      # Playwright: register → upload → ask → verify → open source
 ```
@@ -130,3 +130,4 @@ push.
 * [docs/EVALUATION.md](docs/EVALUATION.md) — metrics, datasets, experiments, benchmarks
 * [PROJECT_STATUS.md](PROJECT_STATUS.md) — what is implemented and verified, and known limitations
 * API reference: `/api/docs` (OpenAPI) on a running instance
+* Engineering case study: `/case-study` on a running web app (architecture, pipeline, benchmarks, test results, screenshots from `frontend/public/case-study/`, regenerated with `frontend/scripts/capture-screenshots.mjs`)

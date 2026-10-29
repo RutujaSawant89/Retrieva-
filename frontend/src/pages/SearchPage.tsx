@@ -7,11 +7,14 @@ import { toast } from 'sonner'
 import { RetrievalOptionsPanel } from '@/components/chat/RetrievalOptionsPanel'
 import { ScopePicker } from '@/components/chat/ScopePicker'
 import { Button } from '@/components/ui/button'
+import { Callout, InfoTip } from '@/components/ui/help'
 import { Tooltip } from '@/components/ui/overlays'
 import { Badge, Card, CardHeader, EmptyState, Input, PageHeader, Skeleton } from '@/components/ui/primitives'
 import { DEFAULT_OPTIONS, searchApi } from '@/services/chat'
 import type { RetrievalOptions, RetrievalScopeInput, SearchResponse } from '@/types/api'
 import { formatMs, formatRelative } from '@/utils/format'
+import { TERMS } from '@/utils/glossary'
+import { settingsSummary, stageName } from '@/utils/retrieval'
 
 function ScoreCell({ value, digits, hint }: { value: number | null; digits: number; hint: string }) {
   return (
@@ -44,10 +47,10 @@ export function SearchPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
+    <div className="page-enter mx-auto max-w-7xl px-4 py-8 lg:px-8">
       <PageHeader
-        title="Search"
-        description="Inspect raw retrieval: see how dense, BM25, fusion and reranking scores rank each passage."
+        title="Search Explorer"
+        description="See exactly which passages Retrieva finds for a question, and why each one ranks where it does."
       />
       <form
         className="mb-6 flex flex-wrap gap-2"
@@ -60,7 +63,7 @@ export function SearchPage() {
           <SearchIcon className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
           <Input
             className="h-10 pl-9"
-            placeholder="Search your documents"
+            placeholder="Type a question or keywords, e.g. termination notice period"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search query"
@@ -76,7 +79,7 @@ export function SearchPage() {
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Pipeline" description="Toggle stages to compare results" />
+            <CardHeader title="Search settings" description="Change a setting and search again to compare" />
             <div className="p-4">
               <RetrievalOptionsPanel value={options} onChange={setOptions} />
             </div>
@@ -101,7 +104,7 @@ export function SearchPage() {
                 ))}
               </ul>
             ) : (
-              <p className="px-4 py-6 text-center text-xs text-muted-foreground">No searches yet</p>
+              <p className="px-4 py-6 text-center text-xs text-muted-foreground">Your searches will appear here</p>
             )}
           </Card>
         </div>
@@ -117,20 +120,29 @@ export function SearchPage() {
             <Card>
               <EmptyState
                 icon={<SearchIcon className="size-5" />}
-                title="Run a search"
-                description="Results show each passage's rank and score at every retrieval stage."
+                title="Search your documents"
+                description="Unlike AI Chat, this shows the raw passages with no written answer, so you can check what Retrieva would read."
               />
+              <div className="px-6 pb-6">
+                <Callout title="How ranking works">
+                  Each passage is scored by {TERMS.semanticSearch.label} (meaning) and {TERMS.keywordSearch.label} (exact
+                  words). Their rankings are combined, then {TERMS.relevanceOptimization.label} re-reads the best candidates.
+                  Hover any score to see the technique behind it.
+                </Callout>
+              </div>
             </Card>
           ) : (
             <>
               <Card className="p-4">
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
                   <span>
-                    <strong>{result.results.length}</strong> results from {result.candidates_considered} fused candidates
+                    <strong>{result.results.length}</strong> passages, chosen from {result.candidates_considered} candidates
                   </span>
-                  <span className="text-muted-foreground">Total {formatMs(result.total_ms)}</span>
-                  <span className="text-muted-foreground">Reranker: {result.reranker ?? 'off'}</span>
-                  <span className="text-muted-foreground">Embeddings: {result.embedding_model}</span>
+                  <span className="text-muted-foreground">{settingsSummary(options)}</span>
+                  <span className="text-muted-foreground">Took {formatMs(result.total_ms)}</span>
+                  <Tooltip content={`Relevance model: ${result.reranker ?? 'off'} · Embedding model: ${result.embedding_model}`}>
+                    <span className="cursor-help text-muted-foreground underline decoration-dotted underline-offset-2">Models used</span>
+                  </Tooltip>
                 </div>
                 {result.queries.length > 1 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
@@ -151,7 +163,7 @@ export function SearchPage() {
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {Object.entries(result.timings_ms).map(([stage, ms]) => (
                     <span key={stage} className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground">
-                      {stage} {formatMs(ms)}
+                      {stageName(stage)} {formatMs(ms)}
                     </span>
                   ))}
                 </div>
@@ -177,26 +189,26 @@ export function SearchPage() {
                             to={`/app/documents/${r.document_id}?start=${r.start_char}&end=${r.end_char}`}
                             className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                           >
-                            Open <ExternalLink className="size-3" />
+                            Open in document <ExternalLink className="size-3" />
                           </Link>
                         </div>
                         <p className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed">{r.compressed ?? r.content}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-surface-2 p-2.5 text-[11px] sm:grid-cols-4">
                           <div>
-                            <p className="text-muted-foreground">Dense (rank {r.ranks.dense ?? '—'})</p>
-                            <ScoreCell value={r.scores.dense} digits={3} hint="Cosine similarity of embeddings" />
+                            <p className="text-muted-foreground">Semantic · rank {r.ranks.dense ?? '—'}</p>
+                            <ScoreCell value={r.scores.dense} digits={3} hint={`${TERMS.semanticSearch.technical}: cosine similarity, higher is closer in meaning.`} />
                           </div>
                           <div>
-                            <p className="text-muted-foreground">BM25 (rank {r.ranks.sparse ?? '—'})</p>
-                            <ScoreCell value={r.scores.sparse} digits={2} hint="Okapi BM25 keyword score" />
+                            <p className="text-muted-foreground">Keyword · rank {r.ranks.sparse ?? '—'}</p>
+                            <ScoreCell value={r.scores.sparse} digits={2} hint={`${TERMS.keywordSearch.technical} score (unbounded).`} />
                           </div>
                           <div>
-                            <p className="text-muted-foreground">RRF fusion</p>
-                            <ScoreCell value={r.scores.fusion} digits={4} hint="Reciprocal Rank Fusion of all rankings" />
+                            <p className="flex items-center gap-1 text-muted-foreground">Combined <InfoTip term="fusion" className="size-3" /></p>
+                            <ScoreCell value={r.scores.fusion} digits={4} hint="Reciprocal Rank Fusion of the semantic and keyword rankings." />
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Rerank</p>
-                            <ScoreCell value={r.scores.rerank} digits={2} hint="Cross-encoder relevance logit" />
+                            <p className="flex items-center gap-1 text-muted-foreground">Relevance <InfoTip term="relevanceOptimization" className="size-3" /></p>
+                            <ScoreCell value={r.scores.rerank} digits={2} hint="Cross-encoder relevance logit. Higher is more relevant; not a probability." />
                           </div>
                         </div>
                       </Card>

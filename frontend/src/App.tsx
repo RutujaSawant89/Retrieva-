@@ -14,6 +14,7 @@ import { AnalyticsPage } from '@/pages/AnalyticsPage'
 import { ComparePage } from '@/pages/ComparePage'
 import { EvaluationPage } from '@/pages/EvaluationPage'
 import { ResearchPage } from '@/pages/ResearchPage'
+import { CaseStudyPage } from '@/pages/case-study/CaseStudyPage'
 import { ChatPage } from '@/pages/chat/ChatPage'
 import { CollectionsPage } from '@/pages/collections/CollectionsPage'
 import { DocumentDetailPage } from '@/pages/documents/DocumentDetailPage'
@@ -50,6 +51,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/case-study" element={<CaseStudyPage />} />
       <Route
         path="/login"
         element={

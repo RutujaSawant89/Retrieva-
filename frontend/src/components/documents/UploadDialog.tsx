@@ -27,14 +27,19 @@ export function UploadDialog({
   open,
   onOpenChange,
   defaultCollectionId,
+  initialFiles,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultCollectionId?: string
+  /** Files dropped onto the page; remount the dialog (key) to pass a new set. */
+  initialFiles?: File[]
 }) {
   const queryClient = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
-  const [pending, setPending] = useState<Pending[]>([])
+  const [pending, setPending] = useState<Pending[]>(() =>
+    (initialFiles ?? []).slice(0, 20).map((file) => ({ file, error: validateFile(file) })),
+  )
   const [dragging, setDragging] = useState(false)
   const [category, setCategory] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('organization')

@@ -33,7 +33,7 @@ test('register, upload, ask, and trace the answer back to its source', async ({ 
   await page.getByLabel('Organization name').fill(`E2E Org ${stamp}`)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Create organization' }).click()
-  await expect(page.getByRole('heading', { name: /Welcome back, E2E/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening), E2E/ })).toBeVisible()
 
   // Sign out and back in
   await page.getByRole('button', { name: 'Account menu' }).click()
@@ -42,7 +42,7 @@ test('register, upload, ask, and trace the answer back to its source', async ({ 
   await page.getByLabel('Work email').fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByRole('heading', { name: /Welcome back/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
 
   // Upload a document and wait until it is indexed
   await page.goto('/app/documents')
@@ -55,7 +55,7 @@ test('register, upload, ask, and trace the answer back to its source', async ({ 
   await page.getByRole('button', { name: /^Upload 1$/ }).click()
   await expect(page.getByText('Uploaded — processing', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Done' }).click()
-  await expect(page.getByRole('row', { name: /travel policy/i }).getByText('Indexed')).toBeVisible({ timeout: 120_000 })
+  await expect(page.getByRole('row', { name: /travel policy/i }).getByText('Ready')).toBeVisible({ timeout: 120_000 })
 
   // Ask a question
   await page.goto('/app/chat')
@@ -67,13 +67,13 @@ test('register, upload, ask, and trace the answer back to its source', async ({ 
   await expect(answer).toContainText('250 EUR', { timeout: 150_000 })
   const citation = answer.getByRole('button', { name: /Show source S\d+/ }).first()
   await expect(citation).toBeVisible()
-  await expect(page.getByText(/Verified against sources|Low evidence coverage/)).toBeVisible()
+  await expect(page.getByText(/Verified against sources|Partly supported by sources/)).toBeVisible()
 
   // Open the evidence and follow it to the highlighted passage in the document
   await citation.click()
   const evidence = page.locator('#evidence-S1').first()
   await expect(evidence).toContainText(/travel policy/i)
-  await expect(evidence.getByText(/Supports answer|Weak support/)).toBeVisible()
+  await expect(evidence.getByText(/Supports answer|Partial support/)).toBeVisible()
   await evidence.getByRole('link', { name: 'Open passage' }).click()
   await expect(page).toHaveURL(/\/app\/documents\/.+\?start=\d+&end=\d+/)
   await expect(page.locator('mark[data-highlight]').filter({ hasText: '250 EUR' })).toBeVisible()
@@ -82,5 +82,5 @@ test('register, upload, ask, and trace the answer back to its source', async ({ 
   await page.goto('/app/chat')
   await page.getByLabel('Message').fill('What is the capital of Australia?')
   await page.getByLabel('Message').press('Enter')
-  await expect(page.getByText('Not enough evidence — answer withheld')).toBeVisible({ timeout: 150_000 })
+  await expect(page.getByText('Evidence insufficient', { exact: true })).toBeVisible({ timeout: 150_000 })
 })

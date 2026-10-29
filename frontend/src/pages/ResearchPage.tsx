@@ -125,10 +125,10 @@ export function ResearchPage() {
     : (view?.subqueries ?? [])
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
+    <div className="page-enter mx-auto max-w-7xl px-4 py-8 lg:px-8">
       <PageHeader
         title="Research"
-        description="Multi-step investigation: the question is decomposed, each part is retrieved separately, evidence is merged and compared, and a cited report is written and verified."
+        description="For bigger questions: Retrieva breaks your question into parts, searches for each, and writes a structured report with verified sources you can export."
       />
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
         <Card className="h-fit">
@@ -143,6 +143,7 @@ export function ResearchPage() {
                 <li key={r.id} className="group relative">
                   <button
                     type="button"
+                    data-report-link
                     onClick={() => {
                       setLive(null)
                       navigate(`/app/research/${r.id}`)
@@ -255,8 +256,8 @@ export function ResearchPage() {
                         <Badge tone={verification.low_support ? 'warning' : 'success'}>
                           {verification.low_support ? 'Low evidence coverage' : 'Verified against sources'}
                         </Badge>
-                        <Badge tone="outline">citations valid {formatPercent(verification.citation_validity, 0)}</Badge>
-                        <Badge tone="outline">coverage {formatPercent(verification.evidence_coverage, 0)}</Badge>
+                        <Badge tone="outline">Valid citations {formatPercent(verification.citation_validity, 0)}</Badge>
+                        <Badge tone="outline">Supported sentences {formatPercent(verification.evidence_coverage, 0)}</Badge>
                       </div>
                     )}
                     {conflicts.length > 0 && (

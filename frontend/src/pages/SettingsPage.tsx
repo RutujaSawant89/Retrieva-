@@ -48,8 +48,8 @@ export function SettingsPage() {
   const checks = passwordChecks(passwords.next, session.user.email)
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 lg:px-8">
-      <PageHeader title="Settings" description="Manage your profile, security and appearance." />
+    <div className="page-enter mx-auto max-w-3xl px-4 py-8 lg:px-8">
+      <PageHeader title="My account" description="Your profile, password and how Retrieva looks." />
 
       <div className="space-y-6">
         <Card>

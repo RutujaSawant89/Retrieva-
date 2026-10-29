@@ -4,10 +4,10 @@ import { cn } from '@/utils/cn'
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={cn('size-7', className)} aria-hidden>
-      <rect width="32" height="32" rx="8" fill="#315EFB" />
+      <rect width="32" height="32" rx="8" fill="#5146E5" />
       <path d="M10 9.5h9.5a4 4 0 0 1 0 8H10z" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinejoin="round" />
       <path d="M10 9.5v13" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M16 17.5l5.5 5.5" stroke="#9DB8FF" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M16 17.5l5.5 5.5" stroke="#B4AEFF" strokeWidth="2.4" strokeLinecap="round" />
     </svg>
   )
 }

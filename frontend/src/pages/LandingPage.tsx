@@ -42,6 +42,9 @@ export function LandingPage() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Logo />
           <nav className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Link to="/case-study">Case study</Link>
+            </Button>
             {authed ? (
               <Button asChild size="sm">
                 <Link to="/app">
@@ -91,6 +94,9 @@ export function LandingPage() {
                 <Link to="/login">Sign in</Link>
               </Button>
             )}
+            <Button asChild size="lg" variant="ghost">
+              <Link to="/case-study">How it&apos;s built</Link>
+            </Button>
           </div>
         </motion.div>
 

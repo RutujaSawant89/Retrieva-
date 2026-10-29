@@ -1,6 +1,6 @@
 # Retrieva — Project Status
 
-_Last updated: 2026-10-24_
+_Last updated: 2026-10-29_
 
 A feature is listed as **done** only when it is implemented and covered by a passing automated
 test or a documented manual verification.
@@ -9,7 +9,7 @@ test or a documented manual verification.
 
 | Check | Result |
 | --- | --- |
-| Backend tests (pytest, real PostgreSQL 16 + pgvector, RLS enforced through a non-superuser role) | 99 passed |
+| Backend tests (pytest, real PostgreSQL 16 + pgvector, RLS enforced through a non-superuser role) | 114 passed |
 | Frontend unit/component tests (Vitest) | 13 passed |
 | End-to-end workflow (Playwright) | Passed locally and in CI |
 | Lint / format / typecheck (ruff, oxlint, tsc) | Clean |

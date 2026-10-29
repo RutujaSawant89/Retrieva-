@@ -108,10 +108,10 @@ function CollectionList() {
   const collections = useQuery({ queryKey: ['collections', 'list', q], queryFn: () => collectionsApi.list({ q: q || undefined }) })
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
+    <div className="page-enter mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <PageHeader
         title="Collections"
-        description="Organize documents — financial reports, policies, research — and query them as a unit."
+        description="Group related documents, like policies or contract versions, and ask questions across just that group."
         actions={
           can('collections:write') && (
             <Button onClick={() => setCreating(true)}>
@@ -197,7 +197,7 @@ function CollectionDetail({ id }: { id: string }) {
   const c = collection.data
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
+    <div className="page-enter mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <Link to="/app/collections" className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-3.5" /> Collections
       </Link>

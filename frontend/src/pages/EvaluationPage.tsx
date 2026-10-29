@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { ChartCard } from '@/components/charts/Charts'
 import { Button } from '@/components/ui/button'
+import { Disclosure } from '@/components/ui/help'
 import { ConfirmDialog, Dialog, DialogContent, Select, Tooltip } from '@/components/ui/overlays'
 import {
   Badge,
@@ -23,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { evaluationApi } from '@/services/insights'
 import type { EvalDataset, EvalRun } from '@/types/api'
 import { cn } from '@/utils/cn'
+import { TERMS } from '@/utils/glossary'
 import { formatDateTime, formatMs } from '@/utils/format'
 
 const METRICS: { key: string; label: string; hint: string; higherIsBetter?: boolean; ms?: boolean }[] = [
@@ -92,10 +94,10 @@ export function EvaluationPage() {
   }))
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
+    <div className="page-enter mx-auto max-w-7xl px-4 py-8 lg:px-8">
       <PageHeader
-        title="Evaluation"
-        description="Measure retrieval and answer quality on labelled questions, and compare pipeline configurations side by side."
+        title="Search Quality Evaluation"
+        description="Measure how reliably Retrieva finds the right passages for questions with known answers, and compare search settings with real numbers."
         actions={
           canRun && (
             <>
@@ -109,6 +111,32 @@ export function EvaluationPage() {
           )
         }
       />
+
+      <Disclosure
+        className="mb-6"
+        title="How evaluation works"
+        description="Three steps: a question set, an experiment, and measured results."
+      >
+        <ol className="grid gap-3 text-[13px] sm:grid-cols-3">
+          <li>
+            <p className="font-medium">1. Upload a question set</p>
+            <p className="text-muted-foreground">Questions paired with the passages or documents that answer them.</p>
+          </li>
+          <li>
+            <p className="font-medium">2. Run an experiment</p>
+            <p className="text-muted-foreground">
+              Every question goes through the real search pipeline with each configuration (e.g. {TERMS.keywordSearch.label}{' '}
+              vs {TERMS.smartSearch.label}).
+            </p>
+          </li>
+          <li>
+            <p className="font-medium">3. Compare the results</p>
+            <p className="text-muted-foreground">
+              Scores like nDCG@10 and Recall@5 show how high the right passages rank. Hover a metric name for its meaning.
+            </p>
+          </li>
+        </ol>
+      </Disclosure>
 
       {datasets.isLoading ? (
         <Skeleton className="h-64" />
@@ -165,7 +193,7 @@ export function EvaluationPage() {
           <div className="min-w-0 space-y-6">
             <ChartCard
               kind="bar"
-              title="Retrieval quality by configuration"
+              title="Search quality by configuration"
               description={
                 selected.length
                   ? 'Selected runs'

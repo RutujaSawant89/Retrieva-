@@ -71,7 +71,7 @@ export function ComparePage() {
   }, [result, filter])
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
+    <div className="page-enter mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <PageHeader
         title="Compare documents"
         description="Aligns passages of two documents by meaning and reports what is the same, what changed, what was added or removed, and where figures disagree."
@@ -135,7 +135,7 @@ export function ComparePage() {
               description={result.summary ? 'Generated from the aligned passages and verified against them' : undefined}
               action={
                 result.summary_verification && 'citation_validity' in result.summary_verification ? (
-                  <Badge tone="outline">citations valid {formatPercent(result.summary_verification.citation_validity, 0)}</Badge>
+                  <Badge tone="outline">Valid citations {formatPercent(result.summary_verification.citation_validity, 0)}</Badge>
                 ) : null
               }
             />

@@ -59,7 +59,7 @@ export function DocumentDetailPage() {
 
   if (detail.isLoading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 lg:px-8">
+      <div className="page-enter mx-auto max-w-6xl space-y-4 px-4 py-8 lg:px-8">
         <Skeleton className="h-10 w-80" />
         <Skeleton className="h-64" />
       </div>
@@ -72,7 +72,7 @@ export function DocumentDetailPage() {
   const processing = isProcessing(doc.status)
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
+    <div className="page-enter mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <Link to="/app/documents" className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-3.5" /> Documents
       </Link>

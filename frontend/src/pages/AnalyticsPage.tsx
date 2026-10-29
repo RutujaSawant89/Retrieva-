@@ -2,11 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { ChartCard, StatTile } from '@/components/charts/Charts'
+import { InfoTip } from '@/components/ui/help'
 import { Select } from '@/components/ui/overlays'
 import { ErrorState, PageHeader, Skeleton } from '@/components/ui/primitives'
 import { analyticsApi } from '@/services/insights'
 import { shortDate } from '@/utils/chart'
 import { formatMs, formatNumber, formatPercent } from '@/utils/format'
+import { STRATEGY_TERMS, stageName } from '@/utils/retrieval'
 
 const RANGES = [
   { value: '7', label: 'Last 7 days' },
@@ -23,13 +25,17 @@ export function AnalyticsPage() {
   const usage = useQuery({ queryKey: ['analytics', 'usage', days], queryFn: () => analyticsApi.usage(days) })
 
   const o = overview.data
-  const strategyRows = retrieval.data?.by_strategy.map((s) => ({ ...s, success_pct: s.success_rate !== null ? s.success_rate * 100 : null }))
+  const strategyRows = retrieval.data?.by_strategy.map((s) => ({
+    ...s,
+    strategy: STRATEGY_TERMS[s.strategy as keyof typeof STRATEGY_TERMS]?.label ?? s.strategy,
+    success_pct: s.success_rate !== null ? s.success_rate * 100 : null,
+  }))
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
+    <div className="page-enter mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <PageHeader
         title="Analytics"
-        description="Measured from your organization's actual queries, answers and ingestion jobs."
+        description="Usage, speed and answer quality, measured from this workspace's real questions, answers and uploads."
         actions={
           <Select
             className="w-40"
@@ -56,10 +62,10 @@ export function AnalyticsPage() {
               [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[104px]" />)
             ) : (
               <>
-                <StatTile label="Total queries" value={formatNumber(o.queries.total)} hint={`${usage.data.active_users} active users in range`} />
-                <StatTile label="Avg. generation latency" value={formatMs(o.answers.avg_generation_ms)} hint="Answered questions only" />
-                <StatTile label="Abstention rate" value={formatPercent(o.answers.abstention_rate)} hint={`${o.answers.abstained} of ${o.answers.total} answers withheld`} />
-                <StatTile label="Citation validity" value={formatPercent(o.answers.citation_validity_rate)} hint={`Evidence coverage ${formatPercent(o.answers.evidence_coverage)}`} />
+                <StatTile label="Questions & searches" value={formatNumber(o.queries.total)} hint={`${usage.data.active_users} active users in range`} />
+                <StatTile label="Avg. answer writing time" value={formatMs(o.answers.avg_generation_ms)} hint="Answered questions only" />
+                <StatTile label={<span className="inline-flex items-center gap-1">Declined for lack of evidence <InfoTip term="evidenceInsufficient" /></span>} value={formatPercent(o.answers.abstention_rate)} hint={`${o.answers.abstained} of ${o.answers.total} answers withheld`} />
+                <StatTile label={<span className="inline-flex items-center gap-1">Valid citations <InfoTip term="citationValidity" /></span>} value={formatPercent(o.answers.citation_validity_rate)} hint={`Supported sentences ${formatPercent(o.answers.evidence_coverage)}`} />
               </>
             )}
           </div>
@@ -67,8 +73,8 @@ export function AnalyticsPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <ChartCard
               kind="bar"
-              title="Query activity"
-              description="Retrieval executions per day (search, chat, research, evaluation)"
+              title="Activity"
+              description="Searches per day across chat, Search Explorer, research and evaluation"
               data={usage.data?.series}
               loading={usage.isLoading}
               xKey="date"
@@ -92,7 +98,7 @@ export function AnalyticsPage() {
             />
             <ChartCard
               kind="line"
-              title="Retrieval latency"
+              title="Search speed"
               description="Mean and 95th percentile per day"
               data={retrieval.data?.latency}
               loading={retrieval.isLoading}
@@ -106,8 +112,8 @@ export function AnalyticsPage() {
             />
             <ChartCard
               kind="line"
-              title="Response latency"
-              description="LLM generation time and end-to-end answer time"
+              title="Answer speed"
+              description="Time to write the answer, and total time from question to answer"
               data={retrieval.data?.response_latency}
               loading={retrieval.isLoading}
               xKey="date"
@@ -120,7 +126,7 @@ export function AnalyticsPage() {
             />
             <ChartCard
               kind="bar"
-              title="Latency by retrieval strategy"
+              title="Speed by search method"
               description="Mean and p95 over the selected range"
               data={strategyRows}
               loading={retrieval.isLoading}
@@ -135,9 +141,9 @@ export function AnalyticsPage() {
             />
             <ChartCard
               kind="bar"
-              title="Where retrieval time goes"
-              description="Average milliseconds per pipeline stage"
-              data={retrieval.data?.stage_ms}
+              title="Where search time goes"
+              description="Average time per search step"
+              data={retrieval.data?.stage_ms.map((row) => ({ ...row, stage: stageName(row.stage) }))}
               loading={retrieval.isLoading}
               xKey="stage"
               xLabel="Stage"
@@ -160,7 +166,7 @@ export function AnalyticsPage() {
             />
             <ChartCard
               kind="bar"
-              title="LLM token consumption"
+              title="AI model usage (tokens)"
               description="Prompt and completion tokens per day (as reported by the provider)"
               data={usage.data?.series}
               loading={usage.isLoading}

@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownUp, FileUp, Lock, MoreHorizontal, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { ArrowDownUp, FileUp, Lock, MoreHorizontal, RotateCcw, Search, Trash2, UploadCloud } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -25,7 +25,7 @@ import { formatBytes, formatRelative } from '@/utils/format'
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'All statuses' },
-  { value: 'completed', label: 'Indexed' },
+  { value: 'completed', label: 'Ready' },
   { value: 'processing', label: 'Processing' },
   { value: 'failed', label: 'Failed' },
 ]
@@ -53,6 +53,8 @@ export function DocumentsPage() {
   const queryClient = useQueryClient()
   const [params, setParams] = useSearchParams()
   const [uploadOpen, setUploadOpen] = useState(params.get('upload') === '1')
+  const [dragging, setDragging] = useState(false)
+  const [dropped, setDropped] = useState<{ files: File[]; key: number }>({ files: [], key: 0 })
   const [search, setSearch] = useState('')
   const [deleting, setDeleting] = useState<DocumentOut | null>(null)
   const q = useDebouncedValue(search)
@@ -108,10 +110,35 @@ export function DocumentsPage() {
   const filtered = q || status !== 'all' || fileType !== 'all' || category !== 'all'
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
+    <div
+      className="page-enter relative mx-auto max-w-6xl px-4 py-8 lg:px-8"
+      onDragEnter={(e) => {
+        if (canUpload && e.dataTransfer.types.includes('Files')) setDragging(true)
+      }}
+      onDragOver={(e) => canUpload && e.preventDefault()}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false)
+      }}
+      onDrop={(e) => {
+        if (!canUpload) return
+        e.preventDefault()
+        setDragging(false)
+        if (e.dataTransfer.files.length) {
+          setDropped({ files: Array.from(e.dataTransfer.files), key: Date.now() })
+          setUploadOpen(true)
+        }
+      }}
+    >
+      {dragging && (
+        <div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary bg-primary-soft/80 backdrop-blur-[1px]">
+          <p className="flex items-center gap-2 text-sm font-medium text-primary">
+            <UploadCloud className="size-5" /> Drop files to upload them
+          </p>
+        </div>
+      )}
       <PageHeader
         title="Documents"
-        description="Your organization's knowledge base. Documents are parsed, chunked, embedded and indexed for retrieval."
+        description="Upload files and manage what Retrieva can answer from. Each document becomes searchable once it shows “Ready”."
         actions={
           canUpload && (
             <Button onClick={() => setUploadOpen(true)}>
@@ -120,6 +147,24 @@ export function DocumentsPage() {
           )
         }
       />
+
+      {canUpload && (
+        <button
+          type="button"
+          onClick={() => setUploadOpen(true)}
+          className="mb-5 flex w-full cursor-pointer items-center gap-4 rounded-xl border border-dashed border-border-strong bg-surface px-5 py-4 text-left transition-colors hover:border-primary hover:bg-primary-soft/40"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            <UploadCloud className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">Drag files anywhere on this page, or click to browse</span>
+            <span className="block text-xs text-muted-foreground">
+              PDF, Word (.docx), text, Markdown, CSV and HTML · up to 50 MB each · up to 20 at once
+            </span>
+          </span>
+        </button>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
@@ -177,7 +222,7 @@ export function DocumentsPage() {
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Document</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
-                  <th className="hidden px-4 py-2.5 font-medium md:table-cell">Pages / chunks</th>
+                  <th className="hidden px-4 py-2.5 font-medium md:table-cell">Pages · passages</th>
                   <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Size</th>
                   <th className="hidden px-4 py-2.5 font-medium md:table-cell">Uploaded</th>
                   <th className="px-4 py-2.5" />
@@ -263,7 +308,15 @@ export function DocumentsPage() {
         )}
       </Card>
 
-      <UploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+      <UploadDialog
+        key={dropped.key}
+        initialFiles={dropped.files}
+        open={uploadOpen}
+        onOpenChange={(open) => {
+          setUploadOpen(open)
+          if (!open) setDropped({ files: [], key: Date.now() })
+        }}
+      />
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
